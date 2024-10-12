@@ -1,6 +1,7 @@
 Embedded Vision System for Photonic Chip Assembly
 
 -- Description --
+  
   This project focuses on developing an embedded vision system for detecting the waveguide entrance on photonic chips during automated assembly. The system aims to achieve micrometer-level precision, and it will be integrated in real-time with an assembly machine. 
 
 -- Objectives --
