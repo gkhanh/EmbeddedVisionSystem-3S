@@ -15,6 +15,7 @@ Embedded Vision System for Photonic Chip Assembly
   3. Calibration: Includes tools for both intrinsic and extrinsic camera calibration to ensure accurate measurements.
 
 -- Project Structure --
+
 ├── src/                    # Core functionality
 ├── data/                   # Sample data and images
 └── README.md               # Project overview
