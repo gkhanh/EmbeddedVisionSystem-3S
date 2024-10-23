@@ -5,7 +5,7 @@ class Visualizer:
     def __init__(self, image):
         self.image = image
 
-    def plot_boundaries(self, vertical_line=None, horizontal_line=None):
+    def plot_boundaries(self, vertical_line, horizontal_line):
         plt.figure(figsize=(10, 10))
         plt.imshow(cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB))
         plt.title("Detected Chip Boundary")

@@ -114,7 +114,7 @@
 from src.chip_boundary_detection import ChipBoundaryDetector
 
 def main():
-    image_path = './data/foto2.png'  # Path to the image
+    image_path = './data/foto6.png'  # Path to the image
     boundary_detector = ChipBoundaryDetector(image_path)
     boundary_detector.visualize_chip_boundary()
 
