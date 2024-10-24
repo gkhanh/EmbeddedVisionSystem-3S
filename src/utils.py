@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.linear_model import RANSACRegressor
 
 
 def filter_lines_within_boundary(lines, axis='horizontal', min_length=150, margin=10):
@@ -50,3 +51,14 @@ def get_line_from_regression(slope, intercept, image_shape, axis='horizontal', o
         x1 = int(slope * y1 + intercept) + offset
         x2 = int(slope * y2 + intercept) + offset
         return np.array([x1, y1, x2, y2], dtype=np.int32)
+
+def fit_line_ransac(points, axis='horizontal'):
+    if len(points) < 2:
+        return None  # Not enough points to fit a line
+    ransac = RANSACRegressor()
+    x = points[:, 0].reshape(-1, 1)
+    y = points[:, 1]
+    ransac.fit(x, y)
+    slope = ransac.estimator_.coef_[0]  # Slope (m)
+    intercept = ransac.estimator_.intercept_  # Intercept (b)
+    return slope, intercept
