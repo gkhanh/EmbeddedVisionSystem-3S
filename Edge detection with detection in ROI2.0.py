@@ -304,38 +304,3 @@ if roi_corners:
     
     # Draw the detected lines and the ROI on the original image
     draw_lines_and_roi(image, slope_horizontal, intercept_horizontal, slope_vertical, intercept_vertical, intersection, roi_corners, vertical_lines_roi, centerline_x1, centerline_x2)
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
