@@ -11,6 +11,7 @@ Thickness_Lines_ROI = 1
 Draw_ROI = False
 Thickness_Lines_Waveguide_Entrance = 3
 Draw_Waveguide_Entrance = True
+draw_jhdjhfjhsjhfjsk_kdjkf = True
 
 
 # Function to adjust contrast
