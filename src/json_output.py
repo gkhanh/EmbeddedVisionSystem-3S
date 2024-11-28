@@ -1,5 +1,5 @@
 import json
-from src.waveguide_entrance_detection import WaveguideEntranceDetector
+from src.EgdeDetectionAlgorithm.waveguide_entrance_detection import WaveguideEntranceDetector
 
 class JsonOutput:
     def __init__(self, image_path, output_json_path='../entrance_coordinates.json'):

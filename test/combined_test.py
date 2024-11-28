@@ -1,9 +1,8 @@
-from src.chip_boundary_detection import ChipBoundaryDetector
-from src.waveguide_entrance_detection import WaveguideEntranceDetector
+from src.EgdeDetectionAlgorithm.chip_boundary_detection import ChipBoundaryDetector
+from src.EgdeDetectionAlgorithm.waveguide_entrance_detection import WaveguideEntranceDetector
 from src.json_output import JsonOutput
-from src.visualizer import Visualizer
+from src.waveguide_entrance_detection.visualizer import Visualizer
 import cv2
-import matplotlib.pyplot as plt
 
 
 def test_combined_detection(image_path):
