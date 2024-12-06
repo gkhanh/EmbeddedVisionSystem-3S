@@ -55,11 +55,7 @@ The program will process the image and return the coordinates of the waveguide e
     "waveguide_entrance": {
         "x": 250,
         "y": 300
-    },
-    "resonator_locations": [
-        {"x": 120, "y": 150},
-        {"x": 180, "y": 210}
-    ]
+    }
 }
 ```
 
