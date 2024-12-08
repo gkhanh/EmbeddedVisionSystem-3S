@@ -1,8 +1,9 @@
 import cv2
-import numpy as np
-from sympy import symbols, Eq, solve
 import matplotlib.pyplot as plt
+import numpy as np
 from sklearn.linear_model import RANSACRegressor
+from sympy import symbols, Eq, solve
+
 
 # ---------- 1. Prepare Image ----------
 def prepare_image(image, scale_factor=2):
@@ -10,19 +11,20 @@ def prepare_image(image, scale_factor=2):
     image_gu = upscale_image(image_g, scale_factor)  # Upscale grayscale image
     return image_gu
 
+
 def upscale_image(image, scale_factor=2, interpolation_method=cv2.INTER_CUBIC):
     height, width = image.shape[:2]
     new_width = int(width * scale_factor)
     new_height = int(height * scale_factor)
     return cv2.resize(image, (new_width, new_height), interpolation=interpolation_method)
 
+
 # ---------- 2. Detect edges ----------
 
 def detect_edges(image_gu):
-
     edges = cv2.Canny(image_gu, 20, 40)
 
-    lines = cv2.HoughLinesP(edges, rho=0.2, theta=np.pi/720, threshold=50, minLineLength=50, maxLineGap=10)
+    lines = cv2.HoughLinesP(edges, rho=0.2, theta=np.pi / 720, threshold=50, minLineLength=50, maxLineGap=10)
 
     horizontal_lines, vertical_lines = devide_lines(lines)
 
@@ -37,12 +39,13 @@ def detect_edges(image_gu):
 
     return horizontal_edge_chip, vertical_edge_chip
 
-def devide_lines(lines):
 
+def devide_lines(lines):
     horizontal_lines = [line[0] for line in lines if abs(line[0][3] - line[0][1]) < 20]
     vertical_lines = [line[0] for line in lines if abs(line[0][2] - line[0][0]) < 20]
 
     return horizontal_lines, vertical_lines
+
 
 def filter_lines(lines, axis='horizontal', threshold=10):
     """Filter lines within a certain pixel range."""
@@ -53,23 +56,26 @@ def filter_lines(lines, axis='horizontal', threshold=10):
     filtered_lines = [lines_sorted[0]]
 
     for line in lines_sorted[1:]:
-        if abs(line[1 if axis == 'horizontal' else 0] - filtered_lines[-1][1 if axis == 'horizontal' else 0]) <= threshold:
+        if abs(line[1 if axis == 'horizontal' else 0] - filtered_lines[-1][
+            1 if axis == 'horizontal' else 0]) <= threshold:
             filtered_lines.append(line)
 
     return filtered_lines
 
-def get_midpoints(lines):
 
+def get_midpoints(lines):
     midpoints = [((x1 + x2) / 2, (y1 + y2) / 2) for x1, y1, x2, y2 in lines]
 
     return midpoints
+
 
 def fit_line(points, axis='horizontal'):
     """Fit a line using RANSAC."""
     if not points:
         return None
 
-    x = np.array([p[0] for p in points]).reshape(-1, 1) if axis == 'horizontal' else np.array([p[1] for p in points]).reshape(-1, 1)
+    x = np.array([p[0] for p in points]).reshape(-1, 1) if axis == 'horizontal' else np.array(
+        [p[1] for p in points]).reshape(-1, 1)
     y = np.array([p[1] for p in points]) if axis == 'horizontal' else np.array([p[0] for p in points])
 
     ransac = RANSACRegressor()
@@ -80,10 +86,10 @@ def fit_line(points, axis='horizontal'):
 
     return slope, intercept
 
+
 # ---------- 3. Extract ROI ----------
 
 def get_ROI(horizontal_edge_chip, vertical_edge_chip, image_gu):
-
     intersection_edge_point = calculate_intersection(horizontal_edge_chip, vertical_edge_chip)
 
     ROI_corners = calculate_rotated_ROI(intersection_edge_point, horizontal_edge_chip)
@@ -92,8 +98,8 @@ def get_ROI(horizontal_edge_chip, vertical_edge_chip, image_gu):
 
     return ROI_image, ROI_bbox, ROI_corners, intersection_edge_point
 
-def calculate_intersection(horizontal_chip_edge, vertical_chip_edge):
 
+def calculate_intersection(horizontal_chip_edge, vertical_chip_edge):
     slope1 = horizontal_chip_edge[0]
     intercept1 = horizontal_chip_edge[1]
     slope2 = vertical_chip_edge[0]
@@ -112,7 +118,8 @@ def calculate_intersection(horizontal_chip_edge, vertical_chip_edge):
     return (int(round(solution[x])), int(round(solution[y])))
 
 
-def calculate_rotated_ROI(intersection, horizontal_chip_edge, roi_width=400, above_distance=100, below_distance=400, horizontal_offset=1622):
+def calculate_rotated_ROI(intersection, horizontal_chip_edge, roi_width=400, above_distance=100, below_distance=400,
+                          horizontal_offset=1622):
     # Center point of the ROI
     x_center = intersection[0] + horizontal_offset
     y_center = intersection[1]  # y position of the horizontal line (intersection point)
@@ -144,27 +151,28 @@ def calculate_rotated_ROI(intersection, horizontal_chip_edge, roi_width=400, abo
 
     return [top_left, top_right, bottom_right, bottom_left]
 
-def extract_ROI(ROI_corners, image_gu):
 
+def extract_ROI(ROI_corners, image_gu):
     roi_points = np.array(ROI_corners, dtype=np.int32)
 
     x, y, w, h = cv2.boundingRect(roi_points)
 
-    ROI_image = image_gu[y:y+h, x:x+w]
+    ROI_image = image_gu[y:y + h, x:x + w]
 
     return ROI_image, [x, y, w, h]
+
 
 # ---------- 4. Detect waveguide lines ----------
 
 def detect_waveguide_lines(ROI_image):
-
     EQ_ROI_image = cv2.equalizeHist(ROI_image)
 
     _, EQBW_ROI_image = cv2.threshold(EQ_ROI_image, 250, 255, cv2.THRESH_BINARY)
 
     edges_in_ROI = cv2.Canny(EQBW_ROI_image, 40, 50)
 
-    lines_in_ROI = cv2.HoughLinesP(edges_in_ROI, rho=0.2, theta=np.pi/720, threshold=50, minLineLength=50, maxLineGap=10)
+    lines_in_ROI = cv2.HoughLinesP(edges_in_ROI, rho=0.2, theta=np.pi / 720, threshold=50, minLineLength=50,
+                                   maxLineGap=10)
 
     horizontal_lines, vertical_lines = devide_lines(lines_in_ROI)
 
@@ -176,6 +184,7 @@ def detect_waveguide_lines(ROI_image):
     right_vertical_line = fit_line(right_vertical_midpoints, axis='vertical')
 
     return left_vertical_line, right_vertical_line
+
 
 def group_midpoints(midpoints, max_distance=2):
     """Group midpoints into clusters based on horizontal proximity."""
@@ -213,22 +222,22 @@ def group_midpoints(midpoints, max_distance=2):
 
     return left_midpoints, right_midpoints
 
+
 # ---------- 5. Get waveguide entrance ----------
 
 def get_waveguide_entrance(horizontal_chip_edge, left_vertical_line, right_vertical_line, ROI_bbox):
-
     left_OS_vertical_line = convert_line_to_original_scale(left_vertical_line, ROI_bbox)
     right_OS_vertical_line = convert_line_to_original_scale(right_vertical_line, ROI_bbox)
 
-    left_point = calculate_intersection(horizontal_chip_edge, left_OS_vertical_line )
+    left_point = calculate_intersection(horizontal_chip_edge, left_OS_vertical_line)
     right_point = calculate_intersection(horizontal_chip_edge, right_OS_vertical_line)
 
     waveguide_entrance_coordinates = calculate_middle(left_point, right_point)
 
     return left_OS_vertical_line, right_OS_vertical_line, waveguide_entrance_coordinates
 
-def convert_line_to_original_scale(line, roi_bbox):
 
+def convert_line_to_original_scale(line, roi_bbox):
     slope = line[0]
     intercept = line[1]
 
@@ -238,8 +247,8 @@ def convert_line_to_original_scale(line, roi_bbox):
 
     return slope, adjusted_intercept
 
-def calculate_middle(point1, point2):
 
+def calculate_middle(point1, point2):
     x1, y1 = point1
     x2, y2 = point2
 
@@ -249,6 +258,7 @@ def calculate_middle(point1, point2):
     print(midpoint_x, midpoint_y)
 
     return (midpoint_x, midpoint_y)
+
 
 # ---------- 6. visualization ----------
 
@@ -260,6 +270,7 @@ def visualize_image(image, title="Image"):
     plt.axis('off')
     plt.show()
 
+
 def draw_lines_hor_or_ver(image, lines, color=(255, 0, 0), thickness=2):
     image_with_lines = image.copy()
 
@@ -269,8 +280,9 @@ def draw_lines_hor_or_ver(image, lines, color=(255, 0, 0), thickness=2):
 
     visualize_image(image_with_lines)
 
-def draw_lines_hor_and_ver(image, horizontal_lines, vertical_lines, color_horizontal=(255, 0, 0), color_vertical=(0, 255, 0), thickness=2):
 
+def draw_lines_hor_and_ver(image, horizontal_lines, vertical_lines, color_horizontal=(255, 0, 0),
+                           color_vertical=(0, 255, 0), thickness=2):
     image_with_lines = image.copy()
 
     for x1, y1, x2, y2 in horizontal_lines:
@@ -281,8 +293,9 @@ def draw_lines_hor_and_ver(image, horizontal_lines, vertical_lines, color_horizo
 
     visualize_image(image_with_lines)
 
-def draw_midpoints_hor_or_ver(image, vertical_midpoints, color_horizontal=(255, 0, 0), color_vertical=(0, 255, 0), radius=5, thickness=-1):
 
+def draw_midpoints_hor_or_ver(image, vertical_midpoints, color_horizontal=(255, 0, 0), color_vertical=(0, 255, 0),
+                              radius=5, thickness=-1):
     image_with_midpoints = image.copy()
 
     for x_mid, y_mid in vertical_midpoints:
@@ -290,8 +303,9 @@ def draw_midpoints_hor_or_ver(image, vertical_midpoints, color_horizontal=(255, 
 
     visualize_image(image_with_midpoints)
 
-def draw_midpoints_hor_and_ver(image, horizontal_midpoints, vertical_midpoints, color_horizontal=(255, 0, 0), color_vertical=(0, 255, 0), radius=5, thickness=-1):
 
+def draw_midpoints_hor_and_ver(image, horizontal_midpoints, vertical_midpoints, color_horizontal=(255, 0, 0),
+                               color_vertical=(0, 255, 0), radius=5, thickness=-1):
     image_with_midpoints = image.copy()
 
     for x_mid, y_mid in horizontal_midpoints:
@@ -302,8 +316,8 @@ def draw_midpoints_hor_and_ver(image, horizontal_midpoints, vertical_midpoints, 
 
     visualize_image(image_with_midpoints)
 
-def draw_RANSAC_edges(image, horizontal_edge_chip, vertical_edge_chip):
 
+def draw_RANSAC_edges(image, horizontal_edge_chip, vertical_edge_chip):
     slope_horizontal = horizontal_edge_chip[0]
     intercept_horizontal = horizontal_edge_chip[1]
 
@@ -324,8 +338,8 @@ def draw_RANSAC_edges(image, horizontal_edge_chip, vertical_edge_chip):
 
     return image
 
-def draw_rotated_roi(image, ROI_corners):
 
+def draw_rotated_roi(image, ROI_corners):
     image_with_ROI = image.copy()
     pts = np.array(ROI_corners, np.int32)
     pts = pts.reshape((-1, 1, 2))
@@ -333,8 +347,8 @@ def draw_rotated_roi(image, ROI_corners):
 
     return image_with_ROI
 
-def draw_waveguide_entrance_lines(image, left_vertical_line, right_vertical_line):
 
+def draw_waveguide_entrance_lines(image, left_vertical_line, right_vertical_line):
     slope_vertical_left = left_vertical_line[0]
     intercept_vertical_left = left_vertical_line[1]
 
@@ -355,13 +369,13 @@ def draw_waveguide_entrance_lines(image, left_vertical_line, right_vertical_line
 
     visualize_image(image)
 
-def draw_all_on_image(image, horizontal_edge_chip, vertical_edge_chip, intersection_point, ROI_corners, vertical_lines_in_original_coords, waveguide_entrance_coordinates):
 
+def draw_all_on_image(image, horizontal_edge_chip, vertical_edge_chip, intersection_point, ROI_corners,
+                      vertical_lines_in_original_coords, waveguide_entrance_coordinates):
     image_with_drawings = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
 
     # Draw lines
     image_with_drawings = draw_RANSAC_edges(image_with_drawings, horizontal_edge_chip, vertical_edge_chip)
-
 
     # Draw intersection point
     cv2.circle(image_with_drawings, intersection_point, 5, (0, 255, 0), -1)
