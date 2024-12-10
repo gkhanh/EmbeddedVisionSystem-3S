@@ -1,4 +1,7 @@
+import math
+
 import matplotlib.pyplot as plt
+import numpy as np
 from icecream import ic
 
 
@@ -55,10 +58,8 @@ def calculate_scale(cameraPoint1, cameraPoint2, real_point1, real_point2):
     real_distance = math.sqrt((X2 - X1) ** 2 + (Y2 - Y1) ** 2)
     # Scale calculation
     scale = pixel_distance / real_distance
+
     return scale
-
-
-import math
 
 
 def calculate_movement(x2, y2, pixel_per_mm, Alpha_deg, Beta_deg):
@@ -83,6 +84,9 @@ def calculate_movement(x2, y2, pixel_per_mm, Alpha_deg, Beta_deg):
     t1 = x2 * pixel_per_mm
     t2 = y2 * pixel_per_mm
 
+    # Debug print to check value t1 and t2
+    ic(t1, t2)
+
     # Calculate T1 and T2
     T1 = t1 * math.sin(Beta) + t2 * math.sin(Alpha)
     T2 = t1 * math.cos(Beta) + t2 * math.cos(Alpha)
@@ -91,72 +95,122 @@ def calculate_movement(x2, y2, pixel_per_mm, Alpha_deg, Beta_deg):
 
 
 # @icAll
-def calculateCameraMovementOffset(cameraPoint1, real_point1, real_point2, cameraPoint2=None, cameraPoint3=None):
-    # ic(cameraPoint1, cameraPoint2, cameraPoint3, real_point1, real_point2)
-    cameraPoint2, cameraPoint3 = extrapolateManipulatorPosition(
-        cameraPoint1, cameraPoint2
-    ) if cameraPoint3 is None else (cameraPoint2, cameraPoint3)
+def calculate_camera_movement_offset(cameraPoint1, real_point1, real_point2, cameraPoint2, cameraPoint3):
+    """
+    Calculate the camera movement offsets in the X and Y directions.
+
+    Parameters:
+    cameraPoint1: Tuple representing the first camera point (x, y) in pixels.
+    real_point1: Tuple representing the first real-world point (X, Y) in mm.
+    real_point2: Tuple representing the second real-world point (X, Y) in mm.
+    cameraPoint2: Tuple representing the second camera point (x, y) in pixels.
+    cameraPoint3: Tuple representing the third camera point (x, y) in pixels.
+
+    Returns:
+    tuple: (cameraXOffset, cameraYOffset) representing the movement offsets in mm.
+    """
 
     alpha = calculate_alpha(cameraPoint1, cameraPoint2)
     beta = calculate_beta(cameraPoint2, cameraPoint3)
     scalePixelInMilimeter = calculate_scale(cameraPoint1, cameraPoint2, real_point1, real_point2)
-    ic(alpha, beta, scalePixelInMilimeter)
+
     cameraXOffset, cameraYOffset = calculate_movement(cameraPoint2[0], cameraPoint2[1], scalePixelInMilimeter, alpha,
                                                       beta)
 
     return cameraXOffset, cameraYOffset
 
 
-def extrapolateManipulatorPosition(firstPoint, secondPoint=None, defaultInitialOffset=2.0):
-    x1, y1 = firstPoint
-    secondPoint = (x1 + defaultInitialOffset, y1 - defaultInitialOffset) if secondPoint is None else secondPoint
-    x2, y2 = secondPoint
-    # Calculate thirdPoint by rotating firstPoint around secondPoint by +90 degrees
-    x3 = x2 + (y1 - y2)
-    y3 = y2 - (x1 - x2)
-
-    thirdPoint = (x3, y3)
-
-    return secondPoint, thirdPoint
-
-
-def visualize_points(set_3_points):
+def calculate_affine_transformation(camera_points, manipulation_points):
     """
-    Visualizes three points on a Cartesian plane, creates arrows from the base point (B)
-    to the other points (A and C) in the set of 3 points, with different colors for the lines and vectors.
+    Calculate the affine transformation parameters that map camera points to manipulation points.
 
     Parameters:
-    set_3_points (list of tuple): List of 3 points (A, B, C) where B is the base point.
+    camera_points: List of tuples, camera points (x, y)
+    manipulation_points: List of tuples, corresponding manipulation points (X, Y)
+
+    Returns:
+    numpy array: Affine transformation matrix [[a, b, c], [d, e, f]]
     """
-    # Unzip the points into separate x and y coordinates for the set of 3 points
-    x1, y1 = zip(*set_3_points)
+    # Prepare matrices for least squares solution
+    A = []
+    b = []
+    for (x, y), (X, Y) in zip(camera_points, manipulation_points):
+        A.append([x, y, 1, 0, 0, 0])
+        A.append([0, 0, 0, x, y, 1])
+        b.append(X)
+        b.append(Y)
 
-    # Create the plot
-    plt.figure(figsize=(6, 6))
+    A = np.array(A)
+    b = np.array(b)
 
-    # Plot the set of 3 points and connect them with lines (no fill)
-    plt.plot(x1[:2], y1[:2], marker='o', label='Y', color='blue', linestyle='-', markersize=8)  # AB in blue
-    plt.plot(x1[1:], y1[1:], marker='o', label='X', color='red', linestyle='-', markersize=8)  # BC in red
+    # Solve for the parameters a, b, c, d, e, f
+    params, residuals, rank, singular_values = np.linalg.lstsq(A, b, rcond=None)
 
-    # Plot arrows from the base point (B) to the other points (A and C) in set_3_points
-    B = set_3_points[1]  # Base point B is the second point in the set of 3 points (index 1)
-    A, C = set_3_points[0], set_3_points[2]  # A is the first point, C is the third point
+    a, b, c, d, e, f = params
+    return np.array([[a, b, c],
+                     [d, e, f],
+                     [0, 0, 1]])  # Homogeneous coordinates
 
-    # Plot vector AB (from B to A) in blue
-    plt.arrow(B[0], B[1], A[0] - B[0], A[1] - B[1],
-              head_width=0.2, head_length=0.3, fc='blue', ec='blue')
 
-    # Plot vector BC (from B to C) in red
-    plt.arrow(B[0], B[1], C[0] - B[0], C[1] - B[1],
-              head_width=0.2, head_length=0.3, fc='red', ec='red')
+def visualize_verification():
+    manipulation_points = [
+        (0, 0),  # M0
+        (3, 9),  # M1
+        (3, 8),  # M2
+        (4, 8),  # M3
+    ]
 
-    # Add labels and title
-    plt.xlabel('X-axis')
-    plt.ylabel('Y-axis')
-    plt.title('Visualization of the Camera Calibration System')
+    camera_points = [
+        (2, 3),  # C1
+        (3, 2),  # C2
+        (4, 3),  # C3
+    ]
+
+    transformation_matrix = calculate_affine_transformation(camera_points, manipulation_points[1:4])
+    c, f = transformation_matrix[0, 2], transformation_matrix[1, 2]
+    camera_origin_manip = (c, f)
+    a, b = transformation_matrix[0, 0], transformation_matrix[0, 1]
+    d, e = transformation_matrix[1, 0], transformation_matrix[1, 1]
+
+    # Normalize direction vectors
+    camera_x_dir = np.array([a, d])
+    camera_y_dir = np.array([b, e])
+    camera_x_dir_unit = camera_x_dir / np.linalg.norm(camera_x_dir)
+    camera_y_dir_unit = camera_y_dir / np.linalg.norm(camera_y_dir)
+
+    # Set arrow scales
+    arrow_scale = 4  # Adjust this value for arrow length
+    arrow_scale_manip = 10  # Scale for manipulation axes
+
+    plt.scatter([p[0] for p in manipulation_points], [p[1] for p in manipulation_points], color='red',
+                label='Manipulation Points')
+    plt.scatter(camera_origin_manip[0], camera_origin_manip[1], color='blue', label='Camera Origin')
+
+    # Plot camera X-axis arrow
+    plt.arrow(float(camera_origin_manip[0]), float(camera_origin_manip[1]),
+              float(camera_x_dir_unit[0] * arrow_scale), float(camera_x_dir_unit[1] * arrow_scale),
+              color='blue', label='Camera X-axis', head_width=0.2, head_length=0.3)
+
+    # Plot camera Y-axis arrow
+    plt.arrow(float(camera_origin_manip[0]), float(camera_origin_manip[1]),
+              float(camera_y_dir_unit[0] * arrow_scale), float(camera_y_dir_unit[1] * arrow_scale),
+              color='green', label='Camera Y-axis', head_width=0.2, head_length=0.3)
+
+    # Plot manipulation X-axis arrow
+    plt.arrow(manipulation_points[0][0], manipulation_points[0][1], arrow_scale_manip, 0,
+              color='red', label='Manipulation X-axis', head_width=0.2, head_length=0.3)
+
+    # Plot manipulation Y-axis arrow
+    plt.arrow(manipulation_points[0][0], manipulation_points[0][1], 0, arrow_scale_manip,
+              color='black', label='Manipulation Y-axis', head_width=0.2, head_length=0.3)
+
+    plt.xlabel('Manipulation X-axis')
+    plt.ylabel('Manipulation Y-axis')
+    plt.title('Verification of Coordinate Transformation')
     plt.legend()
-
-    # Show the plot
     plt.grid(True)
     plt.axis('equal')
+    plt.xlim(-2, 8)
+    plt.ylim(0, 12)
     plt.show()
+
