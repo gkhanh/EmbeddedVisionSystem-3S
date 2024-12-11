@@ -31,5 +31,5 @@ def main(image_path):
 
 
 if __name__ == '__main__':
-    image_path = "../data/foto1.png"
+    image_path = "../src/data/foto1.png"
     main(image_path)

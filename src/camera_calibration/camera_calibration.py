@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from icecream import ic
 
+from src.data.data import camera_points, manipulation_points
+
 
 def calculate_alpha(firstPoint, secondPoint):
     """
@@ -17,7 +19,8 @@ def calculate_alpha(firstPoint, secondPoint):
     """
     x1, y1 = firstPoint
     x2, y2 = secondPoint
-    return math.degrees(math.atan((x2 - x1) / (y1 - y2)))
+    # return math.degrees(math.atan2((x2 - x1) / (y1 - y2)))
+    return math.degrees(math.atan2((y2 - y1), (x2 - x1)))
 
 
 def calculate_beta(firstPoint, secondPoint):
@@ -32,7 +35,8 @@ def calculate_beta(firstPoint, secondPoint):
     """
     x2, y2 = firstPoint
     x3, y3 = secondPoint
-    return math.degrees(math.atan((x3 - x2) / (y3 - y2)))
+    # return math.degrees(math.atan2((x3 - x2) / (y3 - y2)))
+    return math.degrees(math.atan2((y3 - y2), (x3 - x2)))
 
 
 def calculate_scale(cameraPoint1, cameraPoint2, real_point1, real_point2):
@@ -88,8 +92,14 @@ def calculate_movement(x2, y2, pixel_per_mm, Alpha_deg, Beta_deg):
     ic(t1, t2)
 
     # Calculate T1 and T2
-    T1 = t1 * math.sin(Beta) + t2 * math.sin(Alpha)
-    T2 = t1 * math.cos(Beta) + t2 * math.cos(Alpha)
+    # T1 = t1 * math.sin(Beta) + t2 * math.sin(Alpha)
+    # T2 = t1 * math.cos(Beta) + t2 * math.cos(Alpha)
+
+    T1 = t1 * math.cos(Beta) + t2 * math.cos(Alpha)
+    T2 = t1 * math.sin(Beta) + t2 * math.sin(Alpha)
+
+    # T1 = t1 * math.sin(Alpha) + t2 * math.cos(Beta)
+    # T2 = t1 * math.cos(Alpha) - t2 * math.sin(Beta)
 
     return T1, T2
 
@@ -120,13 +130,13 @@ def calculate_camera_movement_offset(cameraPoint1, real_point1, real_point2, cam
     return cameraXOffset, cameraYOffset
 
 
-def calculate_affine_transformation(camera_points, manipulation_points):
+def calculate_affine_transformation(camera_point_coordinates, manipulation_points_coordinates):
     """
     Calculate the affine transformation parameters that map camera points to manipulation points.
 
     Parameters:
-    camera_points: List of tuples, camera points (x, y)
-    manipulation_points: List of tuples, corresponding manipulation points (X, Y)
+    camera_point_coordinates: List of tuples, camera points (x, y)
+    manipulation_points_coordinates: List of tuples, corresponding manipulation points (X, Y)
 
     Returns:
     numpy array: Affine transformation matrix [[a, b, c], [d, e, f]]
@@ -134,7 +144,7 @@ def calculate_affine_transformation(camera_points, manipulation_points):
     # Prepare matrices for least squares solution
     A = []
     b = []
-    for (x, y), (X, Y) in zip(camera_points, manipulation_points):
+    for (x, y), (X, Y) in zip(camera_point_coordinates, manipulation_points_coordinates):
         A.append([x, y, 1, 0, 0, 0])
         A.append([0, 0, 0, x, y, 1])
         b.append(X)
@@ -153,19 +163,6 @@ def calculate_affine_transformation(camera_points, manipulation_points):
 
 
 def visualize_verification():
-    manipulation_points = [
-        (0, 0),  # M0
-        (3, 9),  # M1
-        (3, 8),  # M2
-        (4, 8),  # M3
-    ]
-
-    camera_points = [
-        (2, 3),  # C1
-        (3, 2),  # C2
-        (4, 3),  # C3
-    ]
-
     transformation_matrix = calculate_affine_transformation(camera_points, manipulation_points[1:4])
     c, f = transformation_matrix[0, 2], transformation_matrix[1, 2]
     camera_origin_manip = (c, f)
@@ -211,6 +208,5 @@ def visualize_verification():
     plt.grid(True)
     plt.axis('equal')
     plt.xlim(-2, 8)
-    plt.ylim(0, 12)
+    plt.ylim(-4, 12)
     plt.show()
-
