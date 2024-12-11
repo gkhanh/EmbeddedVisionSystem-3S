@@ -21,9 +21,7 @@ def test_transformation():
 
 
 if __name__ == "__main__":
-    # result = calculate_camera_movement_offset(camera_points[0], manipulation_points[1], manipulation_points[2],
-    #                                           camera_points[1], camera_points[2])
-    # print(f"Camera Movement Offset (T1, T2): {result}")
+
     T1, T2, Alpha, Beta, camera_origin = calculate_camera_movement_offset(camera_points, manipulation_points)
     print(f"Camera Movement Offset (T1, T2): {T1}, {T2}")
     print(f"Alpha: {Alpha}, Beta: {Beta}")

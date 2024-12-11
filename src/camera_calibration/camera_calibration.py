@@ -1,8 +1,6 @@
 import math
-
 import matplotlib.pyplot as plt
 import numpy as np
-from icecream import ic
 
 
 def calculate_alpha(firstPoint, secondPoint):
@@ -65,7 +63,18 @@ def calculate_scale(cameraPoint1, cameraPoint2, real_point1, real_point2):
 
 
 def line_from_points(p1, p2):
-    # Returns line coefficients A, B, C for line Ax + By + C = 0
+    """
+    Construct a line equation (A, B, C) for the line passing through points p1 and p2.
+    Line form: A*x + B*y + C = 0
+
+    Parameters:
+        p1 (tuple): (x1, y1)
+        p2 (tuple): (x2, y2)
+
+    Returns:
+        tuple: (A, B, C) representing the line
+    """
+
     (x1, y1), (x2, y2) = p1, p2
     A = y2 - y1
     B = x1 - x2
@@ -74,6 +83,16 @@ def line_from_points(p1, p2):
 
 
 def line_intersection(L1, L2):
+    """
+    Find the intersection of two lines given by (A1, B1, C1) and (A2, B2, C2).
+
+    Parameters:
+        L1 (tuple): (A1, B1, C1)
+        L2 (tuple): (A2, B2, C2)
+
+    Returns:
+        tuple or None: (x, y) intersection point if exists, otherwise None for parallel lines.
+    """
     # Solve intersection of two lines: A1x + B1y + C1 = 0 and A2x + B2y + C2 = 0
     A1, B1, C1 = L1
     A2, B2, C2 = L2
@@ -112,9 +131,6 @@ def calculate_movement(x2, y2, pixel_per_mm, Alpha_deg, Beta_deg):
     print(f"t1: {t1}, t2: {t2}")
 
     # Calculate T1 and T2
-    # T1 = t1 * math.sin(Beta) + t2 * math.sin(Alpha)
-    # T2 = t1 * math.cos(Beta) + t2 * math.cos(Alpha)
-
     T1 = t1 * math.cos(Beta) + t2 * math.cos(Alpha)
     T2 = t1 * math.sin(Beta) + t2 * math.sin(Alpha)
 
@@ -207,6 +223,17 @@ def calculate_affine_transformation(camera_point_coordinates, manipulation_point
 
 
 def camera_to_global(transformation_matrix, camera_point):
+    """
+    Convert a camera point from pixel coordinates to global (manipulation) coordinates.
+    This uses the affine transformation matrix to map from camera frame to manipulation frame.
+
+    Parameters:
+        transformation_matrix (np.ndarray): 3x3 affine transformation matrix
+        camera_point (tuple): (cx, cy) camera coordinates in pixels
+
+    Returns:
+        tuple: (X, Y) coordinates in the manipulation (global) frame
+    """
     cx, cy = camera_point
     cp_h = np.array([cx, cy, 1])
     gp_h = transformation_matrix @ cp_h
@@ -271,28 +298,3 @@ def visualize_verification(camera_points, manipulation_points):
     plt.xlim(-10, 20)
     plt.ylim(-15, 20)
     plt.show()
-
-# @icAll
-# def calculate_camera_movement_offset(cameraPoint1, real_point1, real_point2, cameraPoint2, cameraPoint3):
-#     """
-#     Calculate the camera movement offsets in the X and Y directions.
-#
-#     Parameters:
-#     cameraPoint1: Tuple representing the first camera point (x, y) in pixels.
-#     real_point1: Tuple representing the first real-world point (X, Y) in mm.
-#     real_point2: Tuple representing the second real-world point (X, Y) in mm.
-#     cameraPoint2: Tuple representing the second camera point (x, y) in pixels.
-#     cameraPoint3: Tuple representing the third camera point (x, y) in pixels.
-#
-#     Returns:
-#     tuple: (cameraXOffset, cameraYOffset) representing the movement offsets in mm.
-#     """
-#
-#     alpha = calculate_alpha(cameraPoint1, cameraPoint2)
-#     beta = calculate_beta(cameraPoint2, cameraPoint3)
-#     scalePixelInMilimeter = calculate_scale(cameraPoint1, cameraPoint2, real_point1, real_point2)
-#
-#     cameraXOffset, cameraYOffset = calculate_movement(cameraPoint2[0], cameraPoint2[1], scalePixelInMilimeter, alpha,
-#                                                       beta)
-#
-#     return cameraXOffset, cameraYOffset
