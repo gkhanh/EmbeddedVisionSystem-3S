@@ -4,8 +4,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from icecream import ic
 
-from src.data.data import camera_points, manipulation_points
-
 
 def calculate_alpha(firstPoint, secondPoint):
     """
@@ -66,6 +64,28 @@ def calculate_scale(cameraPoint1, cameraPoint2, real_point1, real_point2):
     return scale
 
 
+def line_from_points(p1, p2):
+    # Returns line coefficients A, B, C for line Ax + By + C = 0
+    (x1, y1), (x2, y2) = p1, p2
+    A = y2 - y1
+    B = x1 - x2
+    C = (x2 * y1) - (x1 * y2)
+    return A, B, C
+
+
+def line_intersection(L1, L2):
+    # Solve intersection of two lines: A1x + B1y + C1 = 0 and A2x + B2y + C2 = 0
+    A1, B1, C1 = L1
+    A2, B2, C2 = L2
+    denom = A1 * B2 - A2 * B1
+    if denom == 0:
+        # Lines are parallel or coincident; handle gracefully
+        return None
+    x = (B2 * (-C1) - B1 * (-C2)) / denom
+    y = (A1 * (-C2) - A2 * (-C1)) / denom
+    return (x, y)
+
+
 def calculate_movement(x2, y2, pixel_per_mm, Alpha_deg, Beta_deg):
     """
     Calculates the amount of X and Y movement in mm to reach the camera axis origin.
@@ -89,7 +109,7 @@ def calculate_movement(x2, y2, pixel_per_mm, Alpha_deg, Beta_deg):
     t2 = y2 * pixel_per_mm
 
     # Debug print to check value t1 and t2
-    ic(t1, t2)
+    print(f"t1: {t1}, t2: {t2}")
 
     # Calculate T1 and T2
     # T1 = t1 * math.sin(Beta) + t2 * math.sin(Alpha)
@@ -104,30 +124,54 @@ def calculate_movement(x2, y2, pixel_per_mm, Alpha_deg, Beta_deg):
     return T1, T2
 
 
-# @icAll
-def calculate_camera_movement_offset(cameraPoint1, real_point1, real_point2, cameraPoint2, cameraPoint3):
-    """
-    Calculate the camera movement offsets in the X and Y directions.
+def calculate_camera_movement_offset(camera_points, manipulation_points):
+    # Calculate the affine transformation
+    transformation_matrix = calculate_affine_transformation(camera_points, manipulation_points)
 
-    Parameters:
-    cameraPoint1: Tuple representing the first camera point (x, y) in pixels.
-    real_point1: Tuple representing the first real-world point (X, Y) in mm.
-    real_point2: Tuple representing the second real-world point (X, Y) in mm.
-    cameraPoint2: Tuple representing the second camera point (x, y) in pixels.
-    cameraPoint3: Tuple representing the third camera point (x, y) in pixels.
+    # Transform camera points to global (manipulation) coordinates
+    global_points = [camera_to_global(transformation_matrix, cp) for cp in camera_points]
 
-    Returns:
-    tuple: (cameraXOffset, cameraYOffset) representing the movement offsets in mm.
-    """
+    # Let's name them for clarity
+    G1, G2, G3 = global_points  # Corresponding to C1, C2, C3
 
-    alpha = calculate_alpha(cameraPoint1, cameraPoint2)
-    beta = calculate_beta(cameraPoint2, cameraPoint3)
-    scalePixelInMilimeter = calculate_scale(cameraPoint1, cameraPoint2, real_point1, real_point2)
+    # Assume:
+    # Line G1->G2 defines direction of camera Y-axis
+    # Line G1->G3 defines direction of camera X-axis
 
-    cameraXOffset, cameraYOffset = calculate_movement(cameraPoint2[0], cameraPoint2[1], scalePixelInMilimeter, alpha,
-                                                      beta)
+    # Find intersection of these two lines to locate camera origin
+    L_y = line_from_points(G1, G2)
+    L_x = line_from_points(G1, G3)
 
-    return cameraXOffset, cameraYOffset
+    camera_origin = line_intersection(L_y, L_x)
+    if camera_origin is None:
+        # If lines don't intersect, fall back or handle error
+        camera_origin = G1  # fallback, though this shouldn't happen if axes are well-defined
+
+    # Now define alpha and beta from camera_origin:
+    # Camera Y-axis vector: from camera_origin to G2
+    Vy = (G2[0] - camera_origin[0], G2[1] - camera_origin[1])
+    # Camera X-axis vector: from camera_origin to G3
+    Vx = (G3[0] - camera_origin[0], G3[1] - camera_origin[1])
+
+    # Alpha = angle of camera Y-axis w.r.t. global X-axis
+    Alpha = math.degrees(math.atan2(Vy[1], Vy[0]))
+    # Beta = angle of camera X-axis w.r.t. global X-axis
+    Beta = math.degrees(math.atan2(Vx[1], Vx[0]))
+
+    # Scale computation: Use original logic with the first two manipulation points
+    # Assume cameraPoints[0]->cameraPoints[1] corresponds to manipulationPoints[1]->manipulationPoints[2] as before
+    pixel_per_mm = calculate_scale(camera_points[0], camera_points[1], manipulation_points[1], manipulation_points[2])
+
+    # Find movement offset (T1, T2) for cameraPoints[1]
+    # Since the camera coordinate (x2, y2) are originally in pixels, we consider that C2 is supposed to lie along the axes.
+    # Therefore, translate camera_points[1] into camera-based coordinates assuming camera_origin in global coordinates is (0,0)
+    # However, since we are using pixel coords directly in `calculate_movement`, consider (x2, y2) from camera_points[1].
+    x2, y2 = camera_points[1]
+
+    # Convert the given pixel coords to movement offset
+    cameraXOffset, cameraYOffset = calculate_movement(x2, y2, pixel_per_mm, Alpha, Beta)
+
+    return cameraXOffset, cameraYOffset, Alpha, Beta, camera_origin
 
 
 def calculate_affine_transformation(camera_point_coordinates, manipulation_points_coordinates):
@@ -162,7 +206,17 @@ def calculate_affine_transformation(camera_point_coordinates, manipulation_point
                      [0, 0, 1]])  # Homogeneous coordinates
 
 
-def visualize_verification():
+def camera_to_global(transformation_matrix, camera_point):
+    cx, cy = camera_point
+    cp_h = np.array([cx, cy, 1])
+    gp_h = transformation_matrix @ cp_h
+    return (gp_h[0] / gp_h[2], gp_h[1] / gp_h[2])
+
+
+def visualize_verification(camera_points, manipulation_points):
+    # Create a larger figure, for example 10 inches wide by 8 inches tall
+    plt.figure(figsize=(11, 11))
+
     transformation_matrix = calculate_affine_transformation(camera_points, manipulation_points[1:4])
     c, f = transformation_matrix[0, 2], transformation_matrix[1, 2]
     camera_origin_manip = (c, f)
@@ -172,11 +226,18 @@ def visualize_verification():
     # Normalize direction vectors
     camera_x_dir = np.array([a, d])
     camera_y_dir = np.array([b, e])
+    print("Direction vectors:", camera_x_dir, camera_y_dir)
+
+    # Check for zero-length vectors
+    if np.allclose(camera_x_dir, 0) or np.allclose(camera_y_dir, 0):
+        print("Error: Computed direction vectors are zero-length or invalid.")
+        return
+
     camera_x_dir_unit = camera_x_dir / np.linalg.norm(camera_x_dir)
     camera_y_dir_unit = camera_y_dir / np.linalg.norm(camera_y_dir)
 
     # Set arrow scales
-    arrow_scale = 4  # Adjust this value for arrow length
+    arrow_scale = 10  # Adjust this value for arrow length
     arrow_scale_manip = 10  # Scale for manipulation axes
 
     plt.scatter([p[0] for p in manipulation_points], [p[1] for p in manipulation_points], color='red',
@@ -207,6 +268,31 @@ def visualize_verification():
     plt.legend()
     plt.grid(True)
     plt.axis('equal')
-    plt.xlim(-2, 8)
-    plt.ylim(-4, 12)
+    plt.xlim(-10, 20)
+    plt.ylim(-15, 20)
     plt.show()
+
+# @icAll
+# def calculate_camera_movement_offset(cameraPoint1, real_point1, real_point2, cameraPoint2, cameraPoint3):
+#     """
+#     Calculate the camera movement offsets in the X and Y directions.
+#
+#     Parameters:
+#     cameraPoint1: Tuple representing the first camera point (x, y) in pixels.
+#     real_point1: Tuple representing the first real-world point (X, Y) in mm.
+#     real_point2: Tuple representing the second real-world point (X, Y) in mm.
+#     cameraPoint2: Tuple representing the second camera point (x, y) in pixels.
+#     cameraPoint3: Tuple representing the third camera point (x, y) in pixels.
+#
+#     Returns:
+#     tuple: (cameraXOffset, cameraYOffset) representing the movement offsets in mm.
+#     """
+#
+#     alpha = calculate_alpha(cameraPoint1, cameraPoint2)
+#     beta = calculate_beta(cameraPoint2, cameraPoint3)
+#     scalePixelInMilimeter = calculate_scale(cameraPoint1, cameraPoint2, real_point1, real_point2)
+#
+#     cameraXOffset, cameraYOffset = calculate_movement(cameraPoint2[0], cameraPoint2[1], scalePixelInMilimeter, alpha,
+#                                                       beta)
+#
+#     return cameraXOffset, cameraYOffset

@@ -1,7 +1,6 @@
 import numpy as np
 
-from src.camera_calibration.camera_calibration import (visualize_verification, calculate_alpha, calculate_beta,
-                                                       calculate_scale,
+from src.camera_calibration.camera_calibration import (visualize_verification,
                                                        calculate_affine_transformation,
                                                        calculate_camera_movement_offset)
 from src.data.data import manipulation_points, camera_points
@@ -22,19 +21,15 @@ def test_transformation():
 
 
 if __name__ == "__main__":
-    alpha_angle = calculate_alpha(camera_points[0], camera_points[1])
-    beta_angle = calculate_beta(camera_points[0], camera_points[1])
-    pixel_mm_ratio = calculate_scale(camera_points[0], camera_points[1], manipulation_points[1], manipulation_points[2])
-
-    print(f"Alpha (degrees): {alpha_angle}")
-    print(f"Beta (degrees): {beta_angle}")
-    print(f"Pixel-to-mm scale: {pixel_mm_ratio}")
-
-    result = calculate_camera_movement_offset(camera_points[0], manipulation_points[1], manipulation_points[2],
-                                              camera_points[1], camera_points[2])
-    print(f"Camera Movement Offset (T1, T2): {result}")
+    # result = calculate_camera_movement_offset(camera_points[0], manipulation_points[1], manipulation_points[2],
+    #                                           camera_points[1], camera_points[2])
+    # print(f"Camera Movement Offset (T1, T2): {result}")
+    T1, T2, Alpha, Beta, camera_origin = calculate_camera_movement_offset(camera_points, manipulation_points)
+    print(f"Camera Movement Offset (T1, T2): {T1}, {T2}")
+    print(f"Alpha: {Alpha}, Beta: {Beta}")
+    print(f"Camera Origin (Global): {camera_origin}")
 
     # Visualize the combined system
-    visualize_verification()
+    visualize_verification(camera_points, manipulation_points)
     # test the affine transformation
     test_transformation()
