@@ -1,4 +1,5 @@
 import math
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -15,7 +16,6 @@ def calculate_alpha(firstPoint, secondPoint):
     """
     x1, y1 = firstPoint
     x2, y2 = secondPoint
-    # return math.degrees(math.atan2((x2 - x1) / (y1 - y2)))
     return math.degrees(math.atan2((y2 - y1), (x2 - x1)))
 
 
@@ -31,7 +31,6 @@ def calculate_beta(firstPoint, secondPoint):
     """
     x2, y2 = firstPoint
     x3, y3 = secondPoint
-    # return math.degrees(math.atan2((x3 - x2) / (y3 - y2)))
     return math.degrees(math.atan2((y3 - y2), (x3 - x2)))
 
 
@@ -96,12 +95,12 @@ def line_intersection(L1, L2):
     # Solve intersection of two lines: A1x + B1y + C1 = 0 and A2x + B2y + C2 = 0
     A1, B1, C1 = L1
     A2, B2, C2 = L2
-    denom = A1 * B2 - A2 * B1
-    if denom == 0:
+    denominator = A1 * B2 - A2 * B1
+    if denominator == 0:
         # Lines are parallel or coincident; handle gracefully
         return None
-    x = (B2 * (-C1) - B1 * (-C2)) / denom
-    y = (A1 * (-C2) - A2 * (-C1)) / denom
+    x = (B2 * (-C1) - B1 * (-C2)) / denominator
+    y = (A1 * (-C2) - A2 * (-C1)) / denominator
     return (x, y)
 
 
@@ -134,60 +133,7 @@ def calculate_movement(x2, y2, pixel_per_mm, Alpha_deg, Beta_deg):
     T1 = t1 * math.cos(Beta) + t2 * math.cos(Alpha)
     T2 = t1 * math.sin(Beta) + t2 * math.sin(Alpha)
 
-    # T1 = t1 * math.sin(Alpha) + t2 * math.cos(Beta)
-    # T2 = t1 * math.cos(Alpha) - t2 * math.sin(Beta)
-
     return T1, T2
-
-
-def calculate_camera_movement_offset(camera_points, manipulation_points):
-    # Calculate the affine transformation
-    transformation_matrix = calculate_affine_transformation(camera_points, manipulation_points)
-
-    # Transform camera points to global (manipulation) coordinates
-    global_points = [camera_to_global(transformation_matrix, cp) for cp in camera_points]
-
-    # Let's name them for clarity
-    G1, G2, G3 = global_points  # Corresponding to C1, C2, C3
-
-    # Assume:
-    # Line G1->G2 defines direction of camera Y-axis
-    # Line G1->G3 defines direction of camera X-axis
-
-    # Find intersection of these two lines to locate camera origin
-    L_y = line_from_points(G1, G2)
-    L_x = line_from_points(G1, G3)
-
-    camera_origin = line_intersection(L_y, L_x)
-    if camera_origin is None:
-        # If lines don't intersect, fall back or handle error
-        camera_origin = G1  # fallback, though this shouldn't happen if axes are well-defined
-
-    # Now define alpha and beta from camera_origin:
-    # Camera Y-axis vector: from camera_origin to G2
-    Vy = (G2[0] - camera_origin[0], G2[1] - camera_origin[1])
-    # Camera X-axis vector: from camera_origin to G3
-    Vx = (G3[0] - camera_origin[0], G3[1] - camera_origin[1])
-
-    # Alpha = angle of camera Y-axis w.r.t. global X-axis
-    Alpha = math.degrees(math.atan2(Vy[1], Vy[0]))
-    # Beta = angle of camera X-axis w.r.t. global X-axis
-    Beta = math.degrees(math.atan2(Vx[1], Vx[0]))
-
-    # Scale computation: Use original logic with the first two manipulation points
-    # Assume cameraPoints[0]->cameraPoints[1] corresponds to manipulationPoints[1]->manipulationPoints[2] as before
-    pixel_per_mm = calculate_scale(camera_points[0], camera_points[1], manipulation_points[1], manipulation_points[2])
-
-    # Find movement offset (T1, T2) for cameraPoints[1]
-    # Since the camera coordinate (x2, y2) are originally in pixels, we consider that C2 is supposed to lie along the axes.
-    # Therefore, translate camera_points[1] into camera-based coordinates assuming camera_origin in global coordinates is (0,0)
-    # However, since we are using pixel coords directly in `calculate_movement`, consider (x2, y2) from camera_points[1].
-    x2, y2 = camera_points[1]
-
-    # Convert the given pixel coords to movement offset
-    cameraXOffset, cameraYOffset = calculate_movement(x2, y2, pixel_per_mm, Alpha, Beta)
-
-    return cameraXOffset, cameraYOffset, Alpha, Beta, camera_origin
 
 
 def calculate_affine_transformation(camera_point_coordinates, manipulation_points_coordinates):
@@ -238,6 +184,86 @@ def camera_to_global(transformation_matrix, camera_point):
     cp_h = np.array([cx, cy, 1])
     gp_h = transformation_matrix @ cp_h
     return (gp_h[0] / gp_h[2], gp_h[1] / gp_h[2])
+
+
+def signed_angle(u, v):
+    # u and v are 2D vectors
+    cross = u[0] * v[1] - u[1] * v[0]
+    dot = u[0] * v[0] + u[1] * v[1]
+    angle_rad = math.atan2(cross, dot)
+    return math.degrees(angle_rad)
+
+
+def calculate_camera_movement_offset(camera_points, manipulation_points):
+    # Calculate the affine transformation
+    transformation_matrix = calculate_affine_transformation(camera_points, manipulation_points)
+
+    # Transform camera points to global (manipulation) coordinates
+    global_points = [camera_to_global(transformation_matrix, cp) for cp in camera_points]
+
+    # Let's name them for clarity
+    G1, G2, G3 = global_points  # Corresponding to C1, C2, C3
+
+    # Assume:
+    # Line G1->G2 defines direction of camera Y-axis
+    # Line G1->G3 defines direction of camera X-axis
+
+    # Find intersection of these two lines to locate camera origin
+    L_y = line_from_points(G1, G2)
+    L_x = line_from_points(G1, G3)
+
+    camera_origin = line_intersection(L_y, L_x)
+    if camera_origin is None:
+        # If lines don't intersect, fall back or handle error
+        camera_origin = G1  # fallback, though this shouldn't happen if axes are well-defined
+
+    # Scale computation: Use original logic with the first two manipulation points
+    # Assume cameraPoints[0]->cameraPoints[1] corresponds to manipulationPoints[1]->manipulationPoints[2] as before
+    pixel_per_mm = calculate_scale(camera_points[0], camera_points[1], manipulation_points[1], manipulation_points[2])
+
+    # Rotation computation
+    Alpha, Beta = calculate_rotation_with_actual_axes(transformation_matrix)
+
+    # Find movement offset (T1, T2) for cameraPoints[1]
+    # Since the camera coordinate (x2, y2) are originally in pixels, we consider that C2 is supposed to lie along the axes.
+    # Therefore, translate camera_points[1] into camera-based coordinates assuming camera_origin in global coordinates is (0,0)
+    # However, since we are using pixel coords directly in `calculate_movement`, consider (x2, y2) from camera_points[1].
+    x2, y2 = camera_points[1]
+
+    T1, T2 = calculate_movement(x2, y2, pixel_per_mm, Alpha, Beta)
+
+    # Convert the given pixel coords to movement offset
+    # cameraXOffset, cameraYOffset = calculate_movement(x2, y2, pixel_per_mm, Alpha, Beta)
+
+    # return cameraXOffset, cameraYOffset, Alpha, Beta, camera_origin
+    return pixel_per_mm, camera_origin, T1, T2
+
+
+def calculate_rotation_with_actual_axes(transformation_matrix):
+    # Extract linear part
+    a, b, _ = transformation_matrix[0]
+    d, e, _ = transformation_matrix[1]
+
+    # Camera axes directions:
+    camera_x_dir = np.array([a, d])  # In manipulation frame
+    camera_y_dir = np.array([b, e])  # In manipulation frame
+
+    # Normalize
+    camera_x_dir = camera_x_dir / np.linalg.norm(camera_x_dir)
+    camera_y_dir = camera_y_dir / np.linalg.norm(camera_y_dir)
+
+    # Define manipulation axes
+    manip_x_dir = np.array([1.0, 0.0])
+    manip_y_dir = np.array([0.0, 1.0])
+
+    # Use signed_angle to get Alpha and Beta directly
+    # Alpha: angle between camera Y-axis and manipulation Y-axis
+    Alpha = signed_angle(camera_y_dir, manip_y_dir)
+
+    # Beta: angle between camera X-axis and manipulation X-axis
+    Beta = signed_angle(camera_x_dir, manip_x_dir)
+
+    return Alpha, Beta
 
 
 def visualize_verification(camera_points, manipulation_points):
