@@ -97,11 +97,11 @@ def line_intersection(L1, L2):
     A2, B2, C2 = L2
     denominator = A1 * B2 - A2 * B1
     if denominator == 0:
-        # Lines are parallel or coincident; handle gracefully
+        # Lines are parallel or coincident; handle carefully
         return None
     x = (B2 * (-C1) - B1 * (-C2)) / denominator
     y = (A1 * (-C2) - A2 * (-C1)) / denominator
-    return (x, y)
+    return x, y
 
 
 def calculate_movement(x2, y2, pixel_per_mm, Alpha_deg, Beta_deg):
@@ -183,7 +183,7 @@ def camera_to_global(transformation_matrix, camera_point):
     cx, cy = camera_point
     cp_h = np.array([cx, cy, 1])
     gp_h = transformation_matrix @ cp_h
-    return (gp_h[0] / gp_h[2], gp_h[1] / gp_h[2])
+    return gp_h[0] / gp_h[2], gp_h[1] / gp_h[2]
 
 
 def signed_angle(u, v):
@@ -232,10 +232,6 @@ def calculate_camera_movement_offset(camera_points, manipulation_points):
 
     T1, T2 = calculate_movement(x2, y2, pixel_per_mm, Alpha, Beta)
 
-    # Convert the given pixel coords to movement offset
-    # cameraXOffset, cameraYOffset = calculate_movement(x2, y2, pixel_per_mm, Alpha, Beta)
-
-    # return cameraXOffset, cameraYOffset, Alpha, Beta, camera_origin
     return pixel_per_mm, camera_origin, T1, T2
 
 
