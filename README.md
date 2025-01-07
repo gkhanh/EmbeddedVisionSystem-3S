@@ -1,83 +1,111 @@
-# Vision System for Detecting Waveguide Entrance on Photonic Chip
+# Vision System for Assembly Machine Calibration
 
 ## Project Overview
 
-This project is focused on developing a vision system capable of detecting the waveguide entrance and resonator rings on a photonic chip. The system processes an image of the chip and returns the coordinates of the detected features in a JSON file. This program is designed to work with a stationary image capture system.
+This project implements a vision system for calibrating the camera and detecting features on assembly components. The system processes stationary images of components to identify waveguide entrances and resonator rings on photonic chips. The identified features are transformed into global coordinates for precise alignment with the manipulation axis, aiding automated assembly processes.
 
-## Features
+---
 
-- Detects waveguide entrance on a photonic chip
-- Detects resonator rings on the chip
-- Returns the detected positions in JSON format
-- No real-time processing required
-- Pre-assumes the image is taken, and gripper movement is handled separately
+## Key Features
+
+- **Camera Calibration**: Aligns the camera's frame of reference with the manipulation system. Computes pixel-to-millimeter scale, rotation angles, and transformation matrices.
+- **Feature Detection**: Identifies waveguide entrances and resonator rings. Processes edge detection and ROI extraction and outputs feature positions in JSON format.
+- **Visualization**: Displays calibrated axes and detected features for verification.
+
+---
 
 ## Dependencies
 
-The project uses the following Python libraries:
+The following Python libraries are required:
 
-- **OpenCV**: For image processing
-- **NumPy**: For numerical operations
-- **json**: Standard library for handling JSON data
+- **OpenCV**: Image processing and visualization.
+- **NumPy**: Numerical computations.
+- **SymPy**: Symbolic mathematics for solving equations.
+- **Matplotlib**: Visualization of transformations and detection results.
+- **scikit-learn**: Line fitting using RANSAC.
+
+---
 
 ## Setup Instructions
 
-To set up and run this project, follow these steps:
-
 1. Clone the repository:
-
     ```bash
     git clone https://github.com/gkhanh/EmbeddedVisionSystem-3S.git
-    cd vision-system-photonic-chip
+    cd EmbeddedVisionSystem-3S
     ```
 
-2. Install the necessary dependencies by running the shell script:
+2. Install dependencies:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+3. Place input images in the root directory.
+
+4. Run the system:
+    ```bash
+    python main.py
+    ```
+   **Note**: The system currently only run in the test files
 
     ```bash
-    chmod +x install_dependencies.sh
-    ./install_dependencies.sh
+    # Run this file to test the camera calibration function 
+    python test_calibration.py
+    
+    # Run this file to test the waveguide entrance detection function
+    python waveguide_entrance_detection_test.py   
     ```
+---
 
-3. Place the image of the photonic chip (e.g., `chip_image.jpg`) in the root folder.
+## Input/Output
 
-4. Run the Python script to detect the waveguide entrance:
+### Input:
+- High-resolution images of photonic chips.
+- Pre-defined manipulation coordinates for calibration.
 
-    ```bash
-    python3 waveguide_vision_system.py
+### Output:
+- JSON file with coordinates of detected features.
+  - Example format:
+      ```json
+      {
+        "manipulation_points": [
+          [0, 0],
+          [3, 9],
+          [3, 8],
+          [4, 8]
+        ],
+        "camera_points": [ 
+          [2, 3],
+          [3, 2],
+          [4, 3]
+        ]
+      }
     ```
+  **Note**: the camera_points dataset is defined with the assembly machine
+- A graph display the combined axis map of both manipulation and camera coordinate systems
+![img.png](img.png) (90 degree rotation)
+---
 
-## Output
+## Functional Requirements
 
-The program will process the image and return the coordinates of the waveguide entrance and resonator rings in the following format:
+- Stationary image processing; no real-time constraints.
+- Camera and chip movement are managed externally.
+- Assumes a fixed field of view for each image.
 
-```json
-{
-    "waveguide_entrance": {
-        "x": 250,
-        "y": 300
-    }
-}
-```
+---
 
+## Workflow
 
-## Notes ## 
+### 1. Camera Calibration
+- Align the camera’s coordinate system with the manipulation axes.
+- Compute transformation matrices and scaling factors.
 
-- The gripper starts at position [0:0:0]
-- Return the position of the waveguide entrance location as coordinates in
-JSON format
-- Reference plane: Based on the taken picture of the camera
-- FOV(Field of view) & DOF(Depth of field) are not taken into account
-- Picture only zoon in a part of the chip, not the whole chip
+### 2. Feature Detection
+- Detect chip edges and extract regions of interest (ROIs).
+- Identify waveguide and resonator features.
+- Generating the reference plane
 
-**Process**
+### 3. Output
+- Provide precise coordinates for integration with the manipulation system.
+- provide the calculation for getting the reference plane
+---
 
-1. Gripper grab the chip
-2. Gripper moves the chip under the camera
-3. Camera takes a picture
-4. Program processes the image
-5. Return result as JSON file
-
-**Functional Requirements**
-- Don't have to be real-time processing
-- Only taken the picture and analyze it
-- Return the result in JSON
