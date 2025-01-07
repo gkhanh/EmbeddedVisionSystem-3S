@@ -79,5 +79,5 @@ JSON format
 
 **Functional Requirements**
 - Don't have to be real-time processing
-- Only taken the icture and analyze it
+- Only taken the picture and analyze it
 - Return the result in JSON

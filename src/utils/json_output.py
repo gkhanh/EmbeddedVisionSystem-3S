@@ -1,5 +1,4 @@
 import json
-from src.EgdeDetectionAlgorithm.waveguide_entrance_detection import WaveguideEntranceDetector
 
 class JsonOutput:
     def __init__(self, image_path, output_json_path='../entrance_coordinates.json'):
@@ -20,17 +19,4 @@ class JsonOutput:
         else:
             print("No entrance point detected to save.")
 
-    def detect_and_save_entrance(self):
-        # Detect waveguide entrance and save coordinates to a JSON file.
-        # Create the detector and perform the detection
-        waveguide_detector = WaveguideEntranceDetector(self.image_path)
-        waveguide_entrance_line, entrance_point = waveguide_detector.detect_waveguide_entrance()
 
-        # Handle entrance point saving
-        if entrance_point:
-            print(f"Entrance Point Detected: {entrance_point}")
-            self.save_as_json(entrance_point)
-        else:
-            print("No entrance point detected.")
-
-        return entrance_point

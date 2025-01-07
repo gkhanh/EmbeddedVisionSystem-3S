@@ -1,18 +1,18 @@
 # define points
 
 # Data set 1: Rotation by 45 degrees
-manipulation_points = [
-    (0, 0),  # M0: Origin point of manipulation axis map
-    (3, 9),  # M1
-    (3, 8),  # M2
-    (4, 8),  # M3
-]
-
-camera_points = [
-    (2, 3),  # C1
-    (3, 2),  # C2
-    (4, 3),  # C3
-]
+# manipulation_points = [
+#     (0, 0),  # M0: Origin point of manipulation axis map
+#     (3, 9),  # M1
+#     (3, 8),  # M2
+#     (4, 8),  # M3
+# ]
+#
+# camera_points = [
+#     (2, 3),  # C1
+#     (3, 2),  # C2
+#     (4, 3),  # C3
+# ]
 
 # Data set 2: Default - rotation by 0 degree
 # manipulation_points = [
@@ -43,17 +43,17 @@ camera_points = [
 # ]
 
 # Data set 4: Rotation by 90 degrees
-# manipulation_points = [
-#     (0, 0),  # M0: Origin
-#     (4, 0),  # M1: 4 units along X-axis
-#     (6, 3),  # M2: moves diagonally from M1
-#     (2, 3)   # M3: forms a trapezoid shape with the others
-# ]
-#
-# camera_points = [
-#     (10, 18),  # C1 corresponds to M1
-#     (4, 22),   # C2 corresponds to M2
-#     (4, 14)    # C3 corresponds to M3
-# ]
+manipulation_points = [
+    (0, 0),  # M0: Origin
+    (4, 0),  # M1: 4 units along X-axis
+    (6, 3),  # M2: moves diagonally from M1
+    (2, 3)   # M3: forms a trapezoid shape with the others
+]
+
+camera_points = [
+    (10, 18),  # C1 corresponds to M1
+    (4, 22),   # C2 corresponds to M2
+    (4, 14)    # C3 corresponds to M3
+]
 
 # Data set 5: Rotation by 60 degrees
